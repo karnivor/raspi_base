@@ -1,0 +1,18 @@
+---
+- name: Install Docker and Portainer
+  hosts: all
+  become: yes
+  tasks:  
+  - name: Set timezone to Europe/Helsinki
+    community.general.timezone:
+      name: Europe/Helsinki
+  - name: Add locales to .bashrc
+    path: /home/pi/.bashrc
+    block: |
+    
+      export LC_ALL=en_US.UTF-8
+      export LANG=en_US.UTF-8
+      export LANGUAGE=en_US.UTF-8
+      export LC_NUMERIC=fi_FI.UTF-8
+
+

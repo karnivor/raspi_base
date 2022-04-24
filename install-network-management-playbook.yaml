@@ -3,35 +3,76 @@
   hosts: all
   become: yes
   tasks:
+
+    # Basic housekeeping.
+
     - name: Create temporary directory
       file:
         path: /temp
         state: directory
         mode: 0777
-    - name: Get Pi-Hole install script
-      command: chdir=/temp wget -O basic-install.sh https://install.pi-hole.net
-    # - name: Run Pi-Hole install
-    #   command: chdir=/temp bash basic-install.sh # Non-interactive: https://unix.stackexchange.com/questions/423715/install-pi-hole-without-user-interaction
-    - name: Get Pi-Hole install script
-      command: chdir=/temp pihole -up
+
+    - name: Delete if exist
+      file:
+        path: /temp/pi-hole.conf
+        state: absent
+      file:
+        path: /temp/basic-install.sh
+        state: absent
+      file:
+        path: /temp/unifi-install.sh
+        state: absent
+
     - name: Run the equivalent of "apt-get update"
       apt:
         update_cache: yes
         cache_valid_time: 3600
+
+    # Install Unifi Controller.
+
+    - name: Get Unifi install script
+      command: chdir=/temp wget -O unifi-install.sh https://get.glennr.nl/unifi/install/unifi-7.1.61.sh
+
+    - name: Run Unifi install script
+      command: chdir=/temp bash unifi-install.sh --skip
+
+    # Install Pi-Hole + Unbound + Gravity Sync
+
+    - name: Get Pi-Hole install script
+      command: chdir=/temp wget -O basic-install.sh https://install.pi-hole.net
+
+    # - name: Run Pi-Hole install script
+    #   command: chdir=/temp bash basic-install.sh # Non-interactive: https://unix.stackexchange.com/questions/423715/install-pi-hole-without-user-interaction
+
+    - name: Update Pi-Hole
+      command: chdir=/temp pihole -up
+
     - name: Install Unbound for recursive dns
       apt:
         name: unbound
+
+    - name: Disable Unbound service
+      command: service unbound stop
+
+    - name: Disable Unbound systemd
+      command: systemctl stop unbound-resolvconf.service
+      command: systemctl disable unbound-resolvconf.service
+
     - name: Get Unbound configuration script
-      command: chdir=/temp wget https://github.com/karnivor/raspi_base/blob/main/pi-hole.conf
+      command: chdir=/temp wget -O pi-hole.conf https://raw.githubusercontent.com/karnivor/raspi_base/main/pi-hole.conf
+
     - name: Copy Unbound configuration script
       ansible.builtin.copy:
         remote_src: yes
         src: /temp/pi-hole.conf
         dest: /etc/unbound/unbound.conf.d/pi-hole.conf
         mode: u=rw,g=r,o=r
-    - name: Disable Unbound systemd
-      command: systemctl disable unbound-resolvconf.service
-      command: systemctl stop unbound-resolvconf.service
+
     - name: Enable Unbound service
       command: service unbound restart
+
+    - name: Install Gravity Sync
+      command: curl -sSL https://gravity.vmstan.com | bash
+
+
 
