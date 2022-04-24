@@ -18,6 +18,20 @@
       apt:
         update_cache: yes
         cache_valid_time: 3600
-    - name: Install unbound for recursive dns
+    - name: Install Unbound for recursive dns
       apt:
         name: unbound
+    - name: Get Unbound configuration script
+      command: chdir=/temp wget https://github.com/karnivor/raspi_base/blob/main/pi-hole.conf
+    - name: Copy Unbound configuration script
+      ansible.builtin.copy:
+        remote_src: yes
+        src: /temp/pi-hole.conf
+        dest: /etc/unbound/unbound.conf.d/pi-hole.conf
+        mode: u=rw,g=r,o=r
+    - name: Disable Unbound systemd
+      command: systemctl disable unbound-resolvconf.service
+      command: systemctl stop unbound-resolvconf.service
+    - name: Enable Unbound service
+      command: service unbound restart
+
