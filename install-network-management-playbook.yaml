@@ -1,0 +1,23 @@
+---
+- name: Network admin tools
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create temporary directory
+      file:
+        path: /temp
+        state: directory
+        mode: 0777
+    - name: Get Pi-Hole install script
+      command: chdir=/temp wget -O basic-install.sh https://install.pi-hole.net
+    # - name: Run Pi-Hole install
+    #   command: chdir=/temp bash basic-install.sh # Non-interactive: https://unix.stackexchange.com/questions/423715/install-pi-hole-without-user-interaction
+    - name: Get Pi-Hole install script
+      command: chdir=/temp pihole -up
+    - name: Run the equivalent of "apt-get update"
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+    - name: Install unbound for recursive dns
+      apt:
+        name: unbound
